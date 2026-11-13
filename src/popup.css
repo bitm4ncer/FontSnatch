@@ -1,0 +1,16 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #16181d;
+  --muted: #5b6472;
+  --line: #e3e6eb;
+  --accent: #ff5a1f;
+}
+
+body {
+  margin: 0;
+  min-width: 400px;
+  font: 13px/1.45 system-ui, -apple-system, "Segoe UI", sans-serif;
+  color: var(--fg);
+  background: var(--bg);
+}
