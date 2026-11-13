@@ -343,6 +343,28 @@ button {
   text-align: center;
 }
 
+.unassigned {
+  padding: 0 12px 8px;
+  max-height: 30vh;
+  overflow: auto;
+}
+
+.unassigned h3 {
+  margin: 0 0 4px;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+
+.file-sub.error {
+  color: var(--warn);
+}
+
+.preview-failed {
+  opacity: 0.55;
+}
+
 .bottom {
   display: flex;
   align-items: center;

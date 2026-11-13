@@ -1,7 +1,21 @@
-import { getActiveTab, loadSettings } from './lib/browser.js';
+import { downloadBytes, fetchBytes, getActiveTab, loadSettings, saveSettings } from './lib/browser.js';
+import { exportFont } from './lib/convert.js';
+import { fileNameFor, formatBytes, mimeFor } from './lib/format.js';
 import { analyzeTab } from './lib/pipeline.js';
+import { forgetFontFile, loadFontFile, registerPreview } from './lib/preview.js';
 
 const numberFormat = new Intl.NumberFormat('de-DE');
+
+const SUBSET_NAMES = [
+  ['U+0000-00FF', 'latin'],
+  ['U+0400-045F', 'cyrillic'],
+  ['U+0370-03FF', 'greek'],
+  ['U+0600-06FF', 'arabic'],
+  ['U+0900-097F', 'devanagari'],
+  ['U+3040-30FF', 'japanese'],
+  ['U+4E00-9FFF', 'cjk'],
+  ['U+AC00-D7AF', 'korean'],
+];
 
 const state = {
   model: null,
@@ -11,6 +25,7 @@ const state = {
   settings: null,
   loading: false,
   error: null,
+  previewNames: new Map(),
 };
 
 const els = {
@@ -26,6 +41,9 @@ const els = {
   settingsPanel: document.getElementById('settings-panel'),
   allowMismatch: document.getElementById('allow-mismatch'),
   zipButton: document.getElementById('zip-button'),
+  zipFormat: document.getElementById('zip-format'),
+  unassigned: document.getElementById('unassigned'),
+  unassignedList: document.getElementById('unassigned-list'),
 };
 
 function el(tag, className, text) {
@@ -41,6 +59,33 @@ function hostOf(url) {
   } catch {
     return '';
   }
+}
+
+function formatLabel(source) {
+  if (source.format) return source.format;
+  const ext = source.url.split('?')[0].split('.').pop().toLowerCase();
+  return ['woff2', 'woff', 'ttf', 'otf'].includes(ext) ? ext : 'font';
+}
+
+function subsetLabel(range) {
+  if (!range) return null;
+  for (const [needle, name] of SUBSET_NAMES) {
+    if (range.toLowerCase().includes(needle.toLowerCase())) return name;
+  }
+  return null;
+}
+
+function preferredSource(variant) {
+  if (!variant?.sources.length) return null;
+  const rank = (source) => {
+    const format = (source.format || formatLabel(source)).toLowerCase();
+    if (format === 'woff2') return 0;
+    if (format === 'woff') return 1;
+    if (format === 'truetype' || format === 'ttf') return 2;
+    if (format === 'opentype' || format === 'otf') return 3;
+    return 4;
+  };
+  return [...variant.sources].sort((a, b) => rank(a) - rank(b))[0];
 }
 
 function visibleFamilies() {
@@ -68,17 +113,121 @@ function statusText() {
   return text;
 }
 
-function createFileRow(variant) {
+function updateButtons(container, kind) {
+  if (!container) return;
+  if (kind) container.dataset.kind = kind;
+  const effective = container.dataset.kind || '';
+  const allow = state.settings?.allowMismatchedExtension;
+
+  for (const button of container.querySelectorAll('[data-target]')) {
+    const target = button.dataset.target;
+    if (target === 'woff') {
+      button.disabled = false;
+      button.title = 'Als WOFF speichern';
+      continue;
+    }
+    if (!effective) {
+      button.disabled = false;
+      button.title = '';
+      continue;
+    }
+    const mismatch = target !== effective;
+    button.disabled = mismatch && !allow;
+    button.title = mismatch
+      ? allow
+        ? `Inhalt bleibt ${effective.toUpperCase()}, nur die Endung wird umbenannt.`
+        : effective === 'ttf'
+          ? 'Enthält TrueType-Outlines; eine echte OTF-Konvertierung ist nicht möglich.'
+          : 'Enthält CFF-Outlines; eine echte TTF-Konvertierung ist nicht möglich.'
+      : '';
+  }
+}
+
+function makeDownloadButtons(family, variant, source) {
+  const actions = el('div', 'file-actions');
+  for (const target of ['ttf', 'otf', 'woff']) {
+    const button = el('button', 'pill', target.toUpperCase());
+    button.type = 'button';
+    button.dataset.target = target;
+    button.addEventListener('click', () => downloadSource(family, variant, source, target, button));
+    actions.append(button);
+  }
+  return actions;
+}
+
+async function downloadSource(family, variant, source, target, button) {
+  const original = button.textContent;
+  button.disabled = true;
+  button.textContent = '…';
+
+  try {
+    const { bytes } = await loadFontFile(source.url);
+    const result = await exportFont(bytes, target, {
+      allowMismatchedExtension: state.settings.allowMismatchedExtension,
+    });
+    const ext = result.renamed ? target : result.kind;
+    const filename = fileNameFor({
+      family: family.family,
+      weight: variant.weight,
+      style: variant.style,
+      subset: subsetLabel(variant.unicodeRange),
+      ext,
+    });
+    downloadBytes(result.data, filename, mimeFor(result.kind));
+    button.textContent = 'Gespeichert';
+    setTimeout(() => {
+      button.textContent = original;
+      updateButtons(button.parentElement);
+    }, 1200);
+  } catch (error) {
+    console.error(error);
+    button.textContent = error.code === 'FORMAT_MISMATCH' ? 'Format' : 'Fehler';
+    if (error.code === 'FORMAT_MISMATCH') updateButtons(button.parentElement, error.kind);
+    setTimeout(() => {
+      button.textContent = original;
+      updateButtons(button.parentElement);
+    }, 1500);
+  }
+}
+
+function createFileRow(family, variant, source) {
   const row = el('div', 'file');
   const meta = el('div', 'file-meta');
   meta.append(el('span', 'file-title', `${variant.weight} · ${variant.style}`));
-  const sub = [];
-  if (variant.isDefault) sub.push('Standard');
-  sub.push(variant.unicodeRange || 'alle Zeichen');
-  meta.append(el('span', 'file-sub', sub.join(' · ')));
+  const sub = el('span', 'file-sub', `${formatLabel(source)} · ${variant.unicodeRange || 'alle Zeichen'}`);
+  meta.append(sub);
   row.append(meta);
-  row.append(el('div', 'file-actions'));
-  return row;
+
+  const actions = makeDownloadButtons(family, variant, source);
+  row.append(actions);
+
+  let loaded = false;
+  async function ensure() {
+    if (loaded) return;
+    loaded = true;
+    sub.classList.remove('error');
+    try {
+      const { bytes, kind } = await loadFontFile(source.url);
+      sub.textContent = `${formatLabel(source)} · ${formatBytes(bytes.length)}${variant.isDefault ? ' · Standard' : ''}`;
+      updateButtons(actions, kind);
+    } catch (error) {
+      loaded = false;
+      sub.textContent = `Nicht ladbar${error.status ? ` (HTTP ${error.status})` : ''}`;
+      sub.classList.add('error');
+      for (const button of actions.querySelectorAll('[data-target]')) button.disabled = true;
+
+      const retry = el('button', 'pill', 'Retry');
+      retry.type = 'button';
+      retry.addEventListener('click', () => {
+        retry.remove();
+        forgetFontFile(source.url);
+        ensure();
+      });
+      actions.append(retry);
+    }
+  }
+
+  return { row, ensure };
 }
 
 function createCard(family) {
@@ -108,17 +257,85 @@ function createCard(family) {
   const preview = el('div', 'preview', state.settings?.previewText || '');
   card.append(preview);
 
-  card.append(el('div', 'actions'));
+  const defaultVariant = family.variants.find((variant) => variant.isDefault) || family.variants[0];
+  const defaultSource = preferredSource(defaultVariant);
+
+  const actions = el('div', 'actions');
+  card.append(actions);
+
+  if (defaultSource) {
+    card.dataset.defaultUrl = defaultSource.url;
+    for (const target of ['ttf', 'otf', 'woff']) {
+      const button = el('button', 'pill', target.toUpperCase());
+      button.type = 'button';
+      button.dataset.target = target;
+      button.addEventListener('click', () =>
+        downloadSource(family, defaultVariant, defaultSource, target, button),
+      );
+      actions.append(button);
+    }
+  }
 
   if (family.variants.length) {
     const details = el('details', 'files');
     const count = family.variants.length;
     details.append(el('summary', null, `${count} ${count === 1 ? 'Datei' : 'Dateien'} anzeigen`));
-    for (const variant of family.variants) details.append(createFileRow(variant));
+
+    const loaders = [];
+    for (const variant of family.variants) {
+      for (const source of variant.sources) {
+        const { row, ensure } = createFileRow(family, variant, source);
+        loaders.push(ensure);
+        details.append(row);
+      }
+    }
+
+    details.addEventListener('toggle', () => {
+      if (details.open) loaders.forEach((ensure) => ensure());
+    });
     card.append(details);
   }
 
   return card;
+}
+
+function renderUnassigned() {
+  const items = state.model?.unassigned || [];
+  els.unassigned.hidden = items.length === 0;
+  els.unassignedList.textContent = '';
+
+  for (const item of items) {
+    const row = el('div', 'file');
+    const meta = el('div', 'file-meta');
+    meta.append(el('span', 'file-title', item.name));
+    const sub = el('span', 'file-sub', item.url);
+    sub.title = item.url;
+    meta.append(sub);
+    row.append(meta);
+
+    const actions = el('div', 'file-actions');
+    const button = el('button', 'pill', 'Laden');
+    button.type = 'button';
+    button.addEventListener('click', async () => {
+      button.disabled = true;
+      button.textContent = '…';
+      try {
+        const bytes = await fetchBytes(item.url);
+        downloadBytes(bytes, item.name);
+        button.textContent = 'Gespeichert';
+      } catch (error) {
+        console.error(error);
+        button.textContent = 'Fehler';
+      }
+      setTimeout(() => {
+        button.textContent = 'Laden';
+        button.disabled = false;
+      }, 1400);
+    });
+    actions.append(button);
+    row.append(actions);
+    els.unassignedList.append(row);
+  }
 }
 
 function renderEmpty(families) {
@@ -151,15 +368,56 @@ function renderEmpty(families) {
   els.empty.hidden = true;
 }
 
+const observer = new IntersectionObserver(
+  (entries) => {
+    for (const entry of entries) {
+      if (!entry.isIntersecting) continue;
+      observer.unobserve(entry.target);
+      const card = entry.target.closest('.card');
+      const url = card?.dataset.defaultUrl;
+      if (url) loadPreview(card, url);
+    }
+  },
+  { root: els.list, rootMargin: '120px' },
+);
+
+async function loadPreview(card, url) {
+  const preview = card.querySelector('.preview');
+  try {
+    const { bytes, kind } = await loadFontFile(url);
+    let name = state.previewNames.get(url);
+    if (!name) {
+      name = await registerPreview(bytes);
+      state.previewNames.set(url, name);
+    }
+    preview.style.fontFamily = `"${name}", sans-serif`;
+    updateButtons(card.querySelector('.actions'), kind);
+  } catch (error) {
+    console.error(error);
+    preview.title = 'Vorschau nicht verfügbar';
+    preview.classList.add('preview-failed');
+    const badges = card.querySelector('.badges');
+    if (badges && !badges.querySelector('.preview-warn')) {
+      badges.append(el('span', 'badge warn preview-warn', 'Vorschau n. v.'));
+    }
+  }
+}
+
 function render() {
   els.status.textContent = statusText();
   els.list.textContent = '';
   els.reload.disabled = state.loading;
 
   const families = visibleFamilies();
-  for (const family of families) els.list.append(createCard(family));
+  for (const family of families) {
+    const card = createCard(family);
+    els.list.append(card);
+    const preview = card.querySelector('.preview');
+    if (preview && card.dataset.defaultUrl) observer.observe(preview);
+  }
 
   renderEmpty(families);
+  renderUnassigned();
 
   const hasDownloadable = (state.model?.families || []).some((family) => family.available);
   els.zipButton.disabled = !hasDownloadable || state.loading || Boolean(state.error);
@@ -217,6 +475,25 @@ els.reload.addEventListener('click', load);
 
 els.settings.addEventListener('click', () => {
   els.settingsPanel.hidden = !els.settingsPanel.hidden;
+});
+
+els.allowMismatch.addEventListener('change', async () => {
+  state.settings.allowMismatchedExtension = els.allowMismatch.checked;
+  await saveSettings({ allowMismatchedExtension: els.allowMismatch.checked });
+  for (const container of document.querySelectorAll('.actions, .file-actions')) {
+    updateButtons(container);
+  }
+});
+
+let previewTimer = null;
+els.previewText.addEventListener('input', () => {
+  const value = els.previewText.value;
+  clearTimeout(previewTimer);
+  previewTimer = setTimeout(async () => {
+    state.settings.previewText = value;
+    for (const preview of document.querySelectorAll('.preview')) preview.textContent = value;
+    await saveSettings({ previewText: value });
+  }, 300);
 });
 
 async function init() {
