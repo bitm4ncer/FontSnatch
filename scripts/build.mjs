@@ -21,7 +21,7 @@ for (const target of targets) {
     rmSync(join(out, file), { force: true });
   }
 
-  for (const required of ['manifest.json', 'popup.html', 'popup.js', 'icons/icon128.png']) {
+  for (const required of ['manifest.json', 'popup.html', 'popup.js', 'export.html', 'export.js', 'icons/icon128.png']) {
     if (!existsSync(join(out, required))) {
       console.error(`build failed: ${target}/${required} missing`);
       process.exit(1);

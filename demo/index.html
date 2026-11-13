@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="de">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>FontSnatch Demo</title>
+
+    <!-- Google Fonts: erscheint als Webfont mit mehreren Schnitten -->
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <style>
+      /* Selbst gehosteter Font: demo.woff2 muss im Ordner demo/fonts liegen.
+         Fehlt die Datei, fällt der Browser auf Georgia zurück. */
+      @font-face {
+        font-family: "Local Demo";
+        src: url("fonts/demo.woff2") format("woff2");
+        font-weight: 400;
+        font-style: normal;
+      }
+
+      /* Absichtlich nirgends verwendet: testet den Filter "Alle". */
+      @font-face {
+        font-family: "Unused Demo";
+        src: url("fonts/unused.woff2") format("woff2");
+      }
+
+      body {
+        margin: 0 auto;
+        max-width: 720px;
+        padding: 32px 20px;
+        font-family: "Local Demo", Georgia, serif;
+        font-size: 17px;
+        line-height: 1.6;
+      }
+
+      h1 {
+        margin-top: 0;
+      }
+
+      .roboto {
+        font-family: Roboto, sans-serif;
+      }
+
+      .georgia {
+        font-family: Georgia, serif;
+      }
+
+      .hint {
+        margin-top: 32px;
+        padding: 12px 14px;
+        border-left: 3px solid #ff5a1f;
+        background: #fff4ee;
+        font-family: system-ui, sans-serif;
+        font-size: 13px;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>FontSnatch Demo</h1>
+
+    <p>
+      Dieser Absatz nutzt den selbst gehosteten Font „Local Demo“. Fehlt die Datei
+      <code>demo/fonts/demo.woff2</code>, zeigt der Browser Georgia.
+    </p>
+
+    <p class="roboto">
+      Dieser Absatz nutzt <strong>Roboto von Google Fonts</strong> in zwei Schnitten
+      (400 und 700). Im Popup sollten beide Varianten als WOFF2 auftauchen.
+    </p>
+
+    <p class="georgia">Dieser Absatz nutzt Georgia – ein System-Font, nicht herunterladbar.</p>
+
+    <p class="hint">
+      Testfälle: „Genutzt“ zeigt Local Demo, Roboto und Georgia (grau). „Alle“ zeigt
+      zusätzlich „Unused Demo“. „Nur ladbar“ blendet nur Georgia aus, weil die anderen
+      Familien eine Quelle besitzen. Der Sammeldownload enthält Local Demo und Roboto
+      (Unused Demo scheitert absichtlich mit 404).
+    </p>
+  </body>
+</html>
