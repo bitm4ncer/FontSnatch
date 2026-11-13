@@ -1,8 +1,9 @@
 import { api, downloadBytes } from './lib/browser.js';
 import { exportFont } from './lib/convert.js';
 import { fileNameFor, formatBytes } from './lib/format.js';
-import { loadFontFile } from './lib/preview.js';
-import { preferredSource, subsetLabel } from './lib/select.js';
+import { planExport } from './lib/export-plan.js';
+import { loadPreferredFont } from './lib/preview.js';
+import { subsetLabel } from './lib/select.js';
 import { createZip } from './lib/zip.js';
 
 const summary = document.getElementById('summary');
@@ -40,48 +41,40 @@ async function main() {
   }
 
   const { model, format, host } = payload;
-  const families = (model.families || []).filter((family) => family.available);
-  if (!families.length) {
+  const plans = planExport(model, format);
+  if (!plans.length) {
     fail('Keine ladbaren Fonts gefunden.');
     return;
   }
 
-  summary.textContent = `${families.length} ${families.length === 1 ? 'Familie' : 'Familien'} werden vorbereitet …`;
+  summary.textContent = `${plans.length} ${plans.length === 1 ? 'Datei' : 'Dateien'} werden vorbereitet …`;
   const entries = [];
   let errors = 0;
 
-  for (let index = 0; index < families.length; index++) {
-    const family = families[index];
-    const variant = family.variants.find((item) => item.isDefault) || family.variants[0];
-    const source = preferredSource(variant);
+  for (let index = 0; index < plans.length; index++) {
+    const { family, variant, target } = plans[index];
 
-    if (!source) {
+    try {
+      const { bytes, kind } = await loadPreferredFont(variant);
+      const result = await exportFont(bytes, target === 'woff' ? 'woff' : kind);
+      const ext = result.renamed ? target : result.kind;
+      const name = fileNameFor({
+        family: family.family,
+        weight: variant.weight,
+        style: variant.style,
+        subset: subsetLabel(variant.unicodeRange),
+        ext,
+      });
+      entries.push({ name, data: result.data });
+      line(`✓ ${name} · ${formatBytes(result.data.length)}`, 'ok');
+    } catch (error) {
       errors++;
-      line(`✗ ${family.family}: keine Quelle`, 'err');
-    } else {
-      try {
-        const { bytes, kind } = await loadFontFile(source.url);
-        const target = format === 'woff' ? 'woff' : kind;
-        const result = await exportFont(bytes, target);
-        const ext = result.renamed ? target : result.kind;
-        const name = fileNameFor({
-          family: family.family,
-          weight: variant.weight,
-          style: variant.style,
-          subset: subsetLabel(variant.unicodeRange),
-          ext,
-        });
-        entries.push({ name, data: result.data });
-        line(`✓ ${name} · ${formatBytes(result.data.length)}`, 'ok');
-      } catch (error) {
-        errors++;
-        line(`✗ ${family.family}: ${error.message}`, 'err');
-      }
+      line(`✗ ${family.family} ${variant.weight} ${variant.style}: ${error.message}`, 'err');
     }
 
     const done = index + 1;
-    bar.style.width = `${Math.round((done / families.length) * 100)}%`;
-    summary.textContent = `Datei ${done} von ${families.length} …`;
+    bar.style.width = `${Math.round((done / plans.length) * 100)}%`;
+    summary.textContent = `Datei ${done} von ${plans.length} …`;
   }
 
   if (!entries.length) {

@@ -10,7 +10,7 @@ der echten Schrift zeigt und als **TTF**, **OTF** oder **WOFF** herunterlädt.
 - Erkennt genutzte Fonts über die berechneten Styles und ordnet sie den
   `@font-face`-Regeln der Seite zu – auch bei fremden Stylesheets und
   `@import`-Ketten.
-- Filter **Genutzt / Alle / Nur ladbar**, Suche und editierbarer Vorschautext.
+- Filter **Genutzt / Alle / Mit Quelle**, Suche und editierbarer Vorschautext.
 - Live-Vorschau jedes Fonts im Popup.
 - Download pro Datei oder als ZIP (Originalformat oder alles als WOFF).
 - Ehrliche Formate: TrueType-Fonts werden als TTF gespeichert, CFF-Fonts als

@@ -1,3 +1,5 @@
+import { safeFileName } from './format.js';
+
 const CRC_TABLE = new Uint32Array(256);
 for (let n = 0; n < 256; n++) {
   let c = n;
@@ -14,18 +16,20 @@ export function crc32(data) {
 function uniqueNames(entries) {
   const seen = new Set();
   return entries.map((entry) => {
-    let name = entry.name;
-    if (!seen.has(name)) {
-      seen.add(name);
+    let name = safeFileName(entry.name);
+    let key = name.toLowerCase();
+    if (!seen.has(key)) {
+      seen.add(key);
       return { ...entry, name };
     }
     const dot = name.lastIndexOf('.');
     const base = dot > 0 ? name.slice(0, dot) : name;
     const ext = dot > 0 ? name.slice(dot) : '';
     let index = 2;
-    while (seen.has(`${base}-${index}${ext}`)) index++;
+    while (seen.has(`${base}-${index}${ext}`.toLowerCase())) index++;
     name = `${base}-${index}${ext}`;
-    seen.add(name);
+    key = name.toLowerCase();
+    seen.add(key);
     return { ...entry, name };
   });
 }

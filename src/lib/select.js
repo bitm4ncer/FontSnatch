@@ -23,8 +23,8 @@ export function subsetLabel(range) {
   return null;
 }
 
-export function preferredSource(variant) {
-  if (!variant?.sources.length) return null;
+export function rankSources(variant) {
+  if (!variant?.sources?.length) return [];
   const rank = (source) => {
     const format = (source.format || formatLabel(source)).toLowerCase();
     if (format === 'woff2') return 0;
@@ -33,5 +33,9 @@ export function preferredSource(variant) {
     if (format === 'opentype' || format === 'otf') return 3;
     return 4;
   };
-  return [...variant.sources].sort((a, b) => rank(a) - rank(b))[0];
+  return [...variant.sources].sort((a, b) => rank(a) - rank(b));
+}
+
+export function preferredSource(variant) {
+  return rankSources(variant)[0] || null;
 }

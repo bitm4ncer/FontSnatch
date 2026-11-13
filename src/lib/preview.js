@@ -1,5 +1,6 @@
 import { fetchBytes } from './browser.js';
 import { toSfnt } from './convert.js';
+import { rankSources } from './select.js';
 
 const cache = new Map();
 let counter = 0;
@@ -20,6 +21,19 @@ export async function loadFontFile(url) {
     cache.set(url, { error });
     throw error;
   }
+}
+
+export async function loadPreferredFont(variant) {
+  let lastError = null;
+  for (const source of rankSources(variant)) {
+    try {
+      const loaded = await loadFontFile(source.url);
+      return { ...loaded, source };
+    } catch (error) {
+      lastError = error;
+    }
+  }
+  throw lastError || new Error('NO_SOURCE');
 }
 
 export function forgetFontFile(url) {

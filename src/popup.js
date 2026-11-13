@@ -1,9 +1,9 @@
 import { api, downloadBytes, fetchBytes, getActiveTab, loadSettings, saveSettings } from './lib/browser.js';
 import { exportFont } from './lib/convert.js';
-import { fileNameFor, formatBytes, mimeFor } from './lib/format.js';
+import { fileNameFor, formatBytes, mimeFor, safeFileName } from './lib/format.js';
 import { analyzeTab } from './lib/pipeline.js';
-import { forgetFontFile, loadFontFile, registerPreview } from './lib/preview.js';
-import { formatLabel, preferredSource, subsetLabel } from './lib/select.js';
+import { forgetFontFile, loadFontFile, loadPreferredFont, registerPreview } from './lib/preview.js';
+import { formatLabel, subsetLabel } from './lib/select.js';
 
 const numberFormat = new Intl.NumberFormat('de-DE');
 
@@ -118,13 +118,14 @@ function makeDownloadButtons(family, variant, source) {
   return actions;
 }
 
-async function downloadSource(family, variant, source, target, button) {
+async function performDownload(loader, family, variant, target, button) {
   const original = button.textContent;
   button.disabled = true;
   button.textContent = '…';
+  let ok = false;
 
   try {
-    const { bytes } = await loadFontFile(source.url);
+    const { bytes } = await loader();
     const result = await exportFont(bytes, target, {
       allowMismatchedExtension: state.settings.allowMismatchedExtension,
     });
@@ -138,26 +139,33 @@ async function downloadSource(family, variant, source, target, button) {
     });
     downloadBytes(result.data, filename, mimeFor(result.kind));
     button.textContent = 'Gespeichert';
-    setTimeout(() => {
-      button.textContent = original;
-      updateButtons(button.parentElement);
-    }, 1200);
+    ok = true;
   } catch (error) {
     console.error(error);
     button.textContent = error.code === 'FORMAT_MISMATCH' ? 'Format' : 'Fehler';
     if (error.code === 'FORMAT_MISMATCH') updateButtons(button.parentElement, error.kind);
-    setTimeout(() => {
-      button.textContent = original;
-      updateButtons(button.parentElement);
-    }, 1500);
   }
+
+  setTimeout(() => {
+    button.textContent = original;
+    updateButtons(button.parentElement);
+  }, ok ? 1200 : 1500);
+}
+
+function downloadSource(family, variant, source, target, button) {
+  return performDownload(() => loadFontFile(source.url), family, variant, target, button);
+}
+
+function downloadVariant(family, variant, target, button) {
+  return performDownload(() => loadPreferredFont(variant), family, variant, target, button);
 }
 
 function createFileRow(family, variant, source) {
   const row = el('div', 'file');
   const meta = el('div', 'file-meta');
   meta.append(el('span', 'file-title', `${variant.weight} · ${variant.style}`));
-  const sub = el('span', 'file-sub', `${formatLabel(source)} · ${variant.unicodeRange || 'alle Zeichen'}`);
+  const rangeText = variant.unicodeRange || 'alle Zeichen';
+  const sub = el('span', 'file-sub', `${formatLabel(source)} · ${rangeText}`);
   meta.append(sub);
   row.append(meta);
 
@@ -171,13 +179,18 @@ function createFileRow(family, variant, source) {
     sub.classList.remove('error');
     try {
       const { bytes, kind } = await loadFontFile(source.url);
-      sub.textContent = `${formatLabel(source)} · ${formatBytes(bytes.length)}${variant.isDefault ? ' · Standard' : ''}`;
+      sub.textContent = `${formatLabel(source)} · ${rangeText} · ${formatBytes(bytes.length)}${variant.isDefault ? ' · Standard' : ''}`;
       updateButtons(actions, kind);
     } catch (error) {
       loaded = false;
-      sub.textContent = `Nicht ladbar${error.status ? ` (HTTP ${error.status})` : ''}`;
+      const unsupported = error.code === 'UNSUPPORTED_FORMAT';
+      sub.textContent = unsupported
+        ? `${formatLabel(source)} · Format nicht unterstützt`
+        : `Nicht ladbar${error.status ? ` (HTTP ${error.status})` : ''}`;
       sub.classList.add('error');
       for (const button of actions.querySelectorAll('[data-target]')) button.disabled = true;
+
+      if (unsupported) return;
 
       const retry = el('button', 'pill', 'Retry');
       retry.type = 'button';
@@ -221,20 +234,16 @@ function createCard(family) {
   card.append(preview);
 
   const defaultVariant = family.variants.find((variant) => variant.isDefault) || family.variants[0];
-  const defaultSource = preferredSource(defaultVariant);
 
   const actions = el('div', 'actions');
   card.append(actions);
 
-  if (defaultSource) {
-    card.dataset.defaultUrl = defaultSource.url;
+  if (defaultVariant) {
     for (const target of ['ttf', 'otf', 'woff']) {
       const button = el('button', 'pill', target.toUpperCase());
       button.type = 'button';
       button.dataset.target = target;
-      button.addEventListener('click', () =>
-        downloadSource(family, defaultVariant, defaultSource, target, button),
-      );
+      button.addEventListener('click', () => downloadVariant(family, defaultVariant, target, button));
       actions.append(button);
     }
   }
@@ -284,7 +293,7 @@ function renderUnassigned() {
       button.textContent = '…';
       try {
         const bytes = await fetchBytes(item.url);
-        downloadBytes(bytes, item.name);
+        downloadBytes(bytes, safeFileName(item.name));
         button.textContent = 'Gespeichert';
       } catch (error) {
         console.error(error);
@@ -337,21 +346,25 @@ const observer = new IntersectionObserver(
       if (!entry.isIntersecting) continue;
       observer.unobserve(entry.target);
       const card = entry.target.closest('.card');
-      const url = card?.dataset.defaultUrl;
-      if (url) loadPreview(card, url);
+      if (card?.dataset.family) loadPreview(card);
     }
   },
   { root: els.list, rootMargin: '120px' },
 );
 
-async function loadPreview(card, url) {
+async function loadPreview(card) {
   const preview = card.querySelector('.preview');
+  const family = state.model?.families.find((item) => item.key === card.dataset.family);
+  const variant = family?.variants.find((item) => item.isDefault) || family?.variants[0];
+  if (!family || !variant) return;
+
   try {
-    const { bytes, kind } = await loadFontFile(url);
-    let name = state.previewNames.get(url);
+    const { bytes, kind } = await loadPreferredFont(variant);
+    const cacheKey = `${family.key}|${variant.weight}|${variant.style}`;
+    let name = state.previewNames.get(cacheKey);
     if (!name) {
       name = await registerPreview(bytes);
-      state.previewNames.set(url, name);
+      state.previewNames.set(cacheKey, name);
     }
     preview.style.fontFamily = `"${name}", sans-serif`;
     updateButtons(card.querySelector('.actions'), kind);
@@ -376,7 +389,7 @@ function render() {
     const card = createCard(family);
     els.list.append(card);
     const preview = card.querySelector('.preview');
-    if (preview && card.dataset.defaultUrl) observer.observe(preview);
+    if (preview) observer.observe(preview);
   }
 
   renderEmpty(families);
