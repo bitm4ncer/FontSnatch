@@ -1,19 +1,21 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { createRequire } from 'node:module';
+import { createWoff2CodecFromSource } from '../src/lib/woff2-codec.js';
 import { decodeWith } from '../src/lib/woff2.js';
 import { readSfnt } from '../src/lib/sfnt.js';
 
-const require = createRequire(import.meta.url);
-const decoder = require('../src/lib/woff2-decoder.js');
-const ready = new Promise((resolve) => {
-  decoder.onRuntimeInitialized = resolve;
-});
+let codec = null;
+async function getCodec() {
+  if (!codec) codec = await createWoff2CodecFromSource(readFileSync('src/lib/woff2.wasm'));
+  return codec;
+}
 
-test('vendorter Decoder enthält kein new Function (MV3-CSP)', () => {
-  const src = readFileSync('src/lib/woff2-decoder.js', 'utf8');
-  assert.ok(!/new\s+Function/.test(src));
+test('vendorter Codec enthält kein new Function (MV3-CSP)', () => {
+  for (const file of ['font-codecs-core.js', 'woff2-codec.js']) {
+    const src = readFileSync(`src/lib/${file}`, 'utf8');
+    assert.ok(!/new\s+Function/.test(src), file);
+  }
 });
 
 test('dekodiert echte Google-Fonts-WOFF2-Datei', async (t) => {
@@ -25,8 +27,7 @@ test('dekodiert echte Google-Fonts-WOFF2-Datei', async (t) => {
   } catch {
     return t.skip('Testseite nicht erreichbar');
   }
-  await ready;
-  const sfnt = decodeWith(decoder, bytes);
+  const sfnt = decodeWith(await getCodec(), bytes);
   assert.ok(sfnt.length > 50000);
   const font = readSfnt(sfnt);
   assert.equal(font.flavor, 0x00010000);
