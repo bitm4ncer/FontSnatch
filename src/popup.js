@@ -1,21 +1,11 @@
-import { downloadBytes, fetchBytes, getActiveTab, loadSettings, saveSettings } from './lib/browser.js';
+﻿import { api, downloadBytes, fetchBytes, getActiveTab, loadSettings, saveSettings } from './lib/browser.js';
 import { exportFont } from './lib/convert.js';
 import { fileNameFor, formatBytes, mimeFor } from './lib/format.js';
 import { analyzeTab } from './lib/pipeline.js';
 import { forgetFontFile, loadFontFile, registerPreview } from './lib/preview.js';
+import { formatLabel, preferredSource, subsetLabel } from './lib/select.js';
 
 const numberFormat = new Intl.NumberFormat('de-DE');
-
-const SUBSET_NAMES = [
-  ['U+0000-00FF', 'latin'],
-  ['U+0400-045F', 'cyrillic'],
-  ['U+0370-03FF', 'greek'],
-  ['U+0600-06FF', 'arabic'],
-  ['U+0900-097F', 'devanagari'],
-  ['U+3040-30FF', 'japanese'],
-  ['U+4E00-9FFF', 'cjk'],
-  ['U+AC00-D7AF', 'korean'],
-];
 
 const state = {
   model: null,
@@ -61,33 +51,6 @@ function hostOf(url) {
   }
 }
 
-function formatLabel(source) {
-  if (source.format) return source.format;
-  const ext = source.url.split('?')[0].split('.').pop().toLowerCase();
-  return ['woff2', 'woff', 'ttf', 'otf'].includes(ext) ? ext : 'font';
-}
-
-function subsetLabel(range) {
-  if (!range) return null;
-  for (const [needle, name] of SUBSET_NAMES) {
-    if (range.toLowerCase().includes(needle.toLowerCase())) return name;
-  }
-  return null;
-}
-
-function preferredSource(variant) {
-  if (!variant?.sources.length) return null;
-  const rank = (source) => {
-    const format = (source.format || formatLabel(source)).toLowerCase();
-    if (format === 'woff2') return 0;
-    if (format === 'woff') return 1;
-    if (format === 'truetype' || format === 'ttf') return 2;
-    if (format === 'opentype' || format === 'otf') return 3;
-    return 4;
-  };
-  return [...variant.sources].sort((a, b) => rank(a) - rank(b))[0];
-}
-
 function visibleFamilies() {
   const query = state.query.trim().toLowerCase();
   return (state.model?.families || []).filter((family) => {
@@ -103,13 +66,13 @@ function fileCount(families) {
 }
 
 function statusText() {
-  if (state.loading) return 'Analysiere Seite …';
+  if (state.loading) return 'Analysiere Seite â€¦';
   if (state.error) return '';
   if (!state.model) return '';
   const families = state.model.families;
   const files = fileCount(families);
-  let text = `${families.length} ${families.length === 1 ? 'Familie' : 'Familien'} · ${files} ${files === 1 ? 'Datei' : 'Dateien'}`;
-  if (state.model.stats.truncated) text += ' · Seite zu groß, Liste unvollständig';
+  let text = `${families.length} ${families.length === 1 ? 'Familie' : 'Familien'} Â· ${files} ${files === 1 ? 'Datei' : 'Dateien'}`;
+  if (state.model.stats.truncated) text += ' Â· Seite zu groÃŸ, Liste unvollstÃ¤ndig';
   return text;
 }
 
@@ -137,8 +100,8 @@ function updateButtons(container, kind) {
       ? allow
         ? `Inhalt bleibt ${effective.toUpperCase()}, nur die Endung wird umbenannt.`
         : effective === 'ttf'
-          ? 'Enthält TrueType-Outlines; eine echte OTF-Konvertierung ist nicht möglich.'
-          : 'Enthält CFF-Outlines; eine echte TTF-Konvertierung ist nicht möglich.'
+          ? 'EnthÃ¤lt TrueType-Outlines; eine echte OTF-Konvertierung ist nicht mÃ¶glich.'
+          : 'EnthÃ¤lt CFF-Outlines; eine echte TTF-Konvertierung ist nicht mÃ¶glich.'
       : '';
   }
 }
@@ -158,7 +121,7 @@ function makeDownloadButtons(family, variant, source) {
 async function downloadSource(family, variant, source, target, button) {
   const original = button.textContent;
   button.disabled = true;
-  button.textContent = '…';
+  button.textContent = 'â€¦';
 
   try {
     const { bytes } = await loadFontFile(source.url);
@@ -193,8 +156,8 @@ async function downloadSource(family, variant, source, target, button) {
 function createFileRow(family, variant, source) {
   const row = el('div', 'file');
   const meta = el('div', 'file-meta');
-  meta.append(el('span', 'file-title', `${variant.weight} · ${variant.style}`));
-  const sub = el('span', 'file-sub', `${formatLabel(source)} · ${variant.unicodeRange || 'alle Zeichen'}`);
+  meta.append(el('span', 'file-title', `${variant.weight} Â· ${variant.style}`));
+  const sub = el('span', 'file-sub', `${formatLabel(source)} Â· ${variant.unicodeRange || 'alle Zeichen'}`);
   meta.append(sub);
   row.append(meta);
 
@@ -208,7 +171,7 @@ function createFileRow(family, variant, source) {
     sub.classList.remove('error');
     try {
       const { bytes, kind } = await loadFontFile(source.url);
-      sub.textContent = `${formatLabel(source)} · ${formatBytes(bytes.length)}${variant.isDefault ? ' · Standard' : ''}`;
+      sub.textContent = `${formatLabel(source)} Â· ${formatBytes(bytes.length)}${variant.isDefault ? ' Â· Standard' : ''}`;
       updateButtons(actions, kind);
     } catch (error) {
       loaded = false;
@@ -249,10 +212,10 @@ function createCard(family) {
   card.append(head);
 
   const meta = [];
-  if (family.weightsUsed.length) meta.push(family.weightsUsed.join(' · '));
+  if (family.weightsUsed.length) meta.push(family.weightsUsed.join(' Â· '));
   if (family.usedChars) meta.push(`${numberFormat.format(family.usedChars)} Zeichen`);
   else if (!family.isSystem) meta.push('nicht genutzt');
-  if (meta.length) card.append(el('p', 'meta', meta.join(' · ')));
+  if (meta.length) card.append(el('p', 'meta', meta.join(' Â· ')));
 
   const preview = el('div', 'preview', state.settings?.previewText || '');
   card.append(preview);
@@ -318,7 +281,7 @@ function renderUnassigned() {
     button.type = 'button';
     button.addEventListener('click', async () => {
       button.disabled = true;
-      button.textContent = '…';
+      button.textContent = 'â€¦';
       try {
         const bytes = await fetchBytes(item.url);
         downloadBytes(bytes, item.name);
@@ -346,7 +309,7 @@ function renderEmpty(families) {
   if (state.error) {
     els.empty.hidden = false;
     els.empty.textContent =
-      'Auf dieser Seite nicht verfügbar. Öffne eine normale Website (kein chrome://, Add-on-Store oder PDF).';
+      'Auf dieser Seite nicht verfÃ¼gbar. Ã–ffne eine normale Website (kein chrome://, Add-on-Store oder PDF).';
     return;
   }
   if (!state.model) {
@@ -361,8 +324,8 @@ function renderEmpty(families) {
   if (!families.length) {
     els.empty.hidden = false;
     els.empty.textContent = state.query
-      ? `Kein Treffer für „${state.query}“.`
-      : 'Keine Fonts für diesen Filter.';
+      ? `Kein Treffer fÃ¼r â€ž${state.query}â€œ.`
+      : 'Keine Fonts fÃ¼r diesen Filter.';
     return;
   }
   els.empty.hidden = true;
@@ -394,7 +357,7 @@ async function loadPreview(card, url) {
     updateButtons(card.querySelector('.actions'), kind);
   } catch (error) {
     console.error(error);
-    preview.title = 'Vorschau nicht verfügbar';
+    preview.title = 'Vorschau nicht verfÃ¼gbar';
     preview.classList.add('preview-failed');
     const badges = card.querySelector('.badges');
     if (badges && !badges.querySelector('.preview-warn')) {
@@ -494,6 +457,34 @@ els.previewText.addEventListener('input', () => {
     for (const preview of document.querySelectorAll('.preview')) preview.textContent = value;
     await saveSettings({ previewText: value });
   }, 300);
+});
+
+els.zipButton.addEventListener('click', async () => {
+  if (!state.model) return;
+  const key = `export:${Date.now().toString(36)}:${Math.random().toString(36).slice(2, 8)}`;
+  const payload = {
+    model: state.model,
+    format: els.zipFormat.value,
+    host: hostOf(state.analysis?.url || ''),
+  };
+  const original = els.zipButton.textContent;
+  els.zipButton.disabled = true;
+
+  try {
+    await api.storage.local.set({ [key]: payload });
+    await api.tabs.create({
+      url: `${api.runtime.getURL('export.html')}?key=${encodeURIComponent(key)}`,
+    });
+  } catch (error) {
+    console.error(error);
+    els.zipButton.textContent = 'Fehler';
+    setTimeout(() => {
+      els.zipButton.textContent = original;
+    }, 1500);
+  } finally {
+    const hasDownloadable = (state.model?.families || []).some((family) => family.available);
+    els.zipButton.disabled = !hasDownloadable;
+  }
 });
 
 async function init() {
