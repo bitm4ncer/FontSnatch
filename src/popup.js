@@ -1,4 +1,4 @@
-﻿import { api, downloadBytes, fetchBytes, getActiveTab, loadSettings, saveSettings } from './lib/browser.js';
+import { api, downloadBytes, fetchBytes, getActiveTab, loadSettings, saveSettings } from './lib/browser.js';
 import { exportFont } from './lib/convert.js';
 import { fileNameFor, formatBytes, mimeFor } from './lib/format.js';
 import { analyzeTab } from './lib/pipeline.js';
@@ -66,13 +66,13 @@ function fileCount(families) {
 }
 
 function statusText() {
-  if (state.loading) return 'Analysiere Seite â€¦';
+  if (state.loading) return 'Analysiere Seite …';
   if (state.error) return '';
   if (!state.model) return '';
   const families = state.model.families;
   const files = fileCount(families);
-  let text = `${families.length} ${families.length === 1 ? 'Familie' : 'Familien'} Â· ${files} ${files === 1 ? 'Datei' : 'Dateien'}`;
-  if (state.model.stats.truncated) text += ' Â· Seite zu groÃŸ, Liste unvollstÃ¤ndig';
+  let text = `${families.length} ${families.length === 1 ? 'Familie' : 'Familien'} · ${files} ${files === 1 ? 'Datei' : 'Dateien'}`;
+  if (state.model.stats.truncated) text += ' · Seite zu groß, Liste unvollständig';
   return text;
 }
 
@@ -100,8 +100,8 @@ function updateButtons(container, kind) {
       ? allow
         ? `Inhalt bleibt ${effective.toUpperCase()}, nur die Endung wird umbenannt.`
         : effective === 'ttf'
-          ? 'EnthÃ¤lt TrueType-Outlines; eine echte OTF-Konvertierung ist nicht mÃ¶glich.'
-          : 'EnthÃ¤lt CFF-Outlines; eine echte TTF-Konvertierung ist nicht mÃ¶glich.'
+          ? 'Enthält TrueType-Outlines; eine echte OTF-Konvertierung ist nicht möglich.'
+          : 'Enthält CFF-Outlines; eine echte TTF-Konvertierung ist nicht möglich.'
       : '';
   }
 }
@@ -121,7 +121,7 @@ function makeDownloadButtons(family, variant, source) {
 async function downloadSource(family, variant, source, target, button) {
   const original = button.textContent;
   button.disabled = true;
-  button.textContent = 'â€¦';
+  button.textContent = '…';
 
   try {
     const { bytes } = await loadFontFile(source.url);
@@ -156,8 +156,8 @@ async function downloadSource(family, variant, source, target, button) {
 function createFileRow(family, variant, source) {
   const row = el('div', 'file');
   const meta = el('div', 'file-meta');
-  meta.append(el('span', 'file-title', `${variant.weight} Â· ${variant.style}`));
-  const sub = el('span', 'file-sub', `${formatLabel(source)} Â· ${variant.unicodeRange || 'alle Zeichen'}`);
+  meta.append(el('span', 'file-title', `${variant.weight} · ${variant.style}`));
+  const sub = el('span', 'file-sub', `${formatLabel(source)} · ${variant.unicodeRange || 'alle Zeichen'}`);
   meta.append(sub);
   row.append(meta);
 
@@ -171,7 +171,7 @@ function createFileRow(family, variant, source) {
     sub.classList.remove('error');
     try {
       const { bytes, kind } = await loadFontFile(source.url);
-      sub.textContent = `${formatLabel(source)} Â· ${formatBytes(bytes.length)}${variant.isDefault ? ' Â· Standard' : ''}`;
+      sub.textContent = `${formatLabel(source)} · ${formatBytes(bytes.length)}${variant.isDefault ? ' · Standard' : ''}`;
       updateButtons(actions, kind);
     } catch (error) {
       loaded = false;
@@ -212,10 +212,10 @@ function createCard(family) {
   card.append(head);
 
   const meta = [];
-  if (family.weightsUsed.length) meta.push(family.weightsUsed.join(' Â· '));
+  if (family.weightsUsed.length) meta.push(family.weightsUsed.join(' · '));
   if (family.usedChars) meta.push(`${numberFormat.format(family.usedChars)} Zeichen`);
   else if (!family.isSystem) meta.push('nicht genutzt');
-  if (meta.length) card.append(el('p', 'meta', meta.join(' Â· ')));
+  if (meta.length) card.append(el('p', 'meta', meta.join(' · ')));
 
   const preview = el('div', 'preview', state.settings?.previewText || '');
   card.append(preview);
@@ -281,7 +281,7 @@ function renderUnassigned() {
     button.type = 'button';
     button.addEventListener('click', async () => {
       button.disabled = true;
-      button.textContent = 'â€¦';
+      button.textContent = '…';
       try {
         const bytes = await fetchBytes(item.url);
         downloadBytes(bytes, item.name);
@@ -309,7 +309,7 @@ function renderEmpty(families) {
   if (state.error) {
     els.empty.hidden = false;
     els.empty.textContent =
-      'Auf dieser Seite nicht verfÃ¼gbar. Ã–ffne eine normale Website (kein chrome://, Add-on-Store oder PDF).';
+      'Auf dieser Seite nicht verfügbar. Öffne eine normale Website (kein chrome://, Add-on-Store oder PDF).';
     return;
   }
   if (!state.model) {
@@ -324,8 +324,8 @@ function renderEmpty(families) {
   if (!families.length) {
     els.empty.hidden = false;
     els.empty.textContent = state.query
-      ? `Kein Treffer fÃ¼r â€ž${state.query}â€œ.`
-      : 'Keine Fonts fÃ¼r diesen Filter.';
+      ? `Kein Treffer für „${state.query}“.`
+      : 'Keine Fonts für diesen Filter.';
     return;
   }
   els.empty.hidden = true;
@@ -357,7 +357,7 @@ async function loadPreview(card, url) {
     updateButtons(card.querySelector('.actions'), kind);
   } catch (error) {
     console.error(error);
-    preview.title = 'Vorschau nicht verfÃ¼gbar';
+    preview.title = 'Vorschau nicht verfügbar';
     preview.classList.add('preview-failed');
     const badges = card.querySelector('.badges');
     if (badges && !badges.querySelector('.preview-warn')) {
@@ -482,8 +482,7 @@ els.zipButton.addEventListener('click', async () => {
       els.zipButton.textContent = original;
     }, 1500);
   } finally {
-    const hasDownloadable = (state.model?.families || []).some((family) => family.available);
-    els.zipButton.disabled = !hasDownloadable;
+    els.zipButton.disabled = !(state.model?.families || []).some((family) => family.available);
   }
 });
 

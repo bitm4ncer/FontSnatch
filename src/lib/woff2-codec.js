@@ -1,4 +1,4 @@
-﻿import { FontCodecError, FontCodecError as FontCodecError$1, createRuntime, integerOption, validateFont } from "./font-codecs-core.js";
+import { FontCodecError, FontCodecError as FontCodecError$1, createRuntime, integerOption, validateFont } from "./font-codecs-core.js";
 //#region packages/woff2-codec/src/index.ts
 const wasmUrl = new URL("woff2.wasm", import.meta.url);
 async function createWoff2Codec(options = {}) {
