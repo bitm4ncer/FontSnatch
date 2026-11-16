@@ -1,5 +1,6 @@
 import { api, downloadBytes } from './lib/browser.js';
 import { exportFont } from './lib/convert.js';
+import { describeError } from './lib/errors.js';
 import { fileNameFor, formatBytes } from './lib/format.js';
 import { planExport } from './lib/export-plan.js';
 import { loadPreferredFont } from './lib/preview.js';
@@ -69,7 +70,7 @@ async function main() {
       line(`✓ ${name} · ${formatBytes(result.data.length)}`, 'ok');
     } catch (error) {
       errors++;
-      line(`✗ ${family.family} ${variant.weight} ${variant.style}: ${error.message}`, 'err');
+      line(`✗ ${family.family} ${variant.weight} ${variant.style}: ${describeError(error)}`, 'err');
     }
 
     const done = index + 1;

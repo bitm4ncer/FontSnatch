@@ -58,6 +58,9 @@ passende Button ist dann deaktiviert und erklärt warum.
   enthaltenen Glyphen. Die Datei-Zeile zeigt das Subset.
 - Variable Fonts werden als eine Datei behandelt.
 - System-Fonts lassen sich nicht herunterladen.
+- Fehlt eine im CSS deklarierte Datei auf dem Server (z. B. die Kursiv-Schnitte
+  von dandad.org, beide 404), meldet die Extension das pro Datei mit HTTP-Status.
+  Sie kann nur herunterladen, was der Server tatsächlich liefert.
 - Der Download ersetzt keine Lizenz. Nur Fonts verwenden, für die Rechte
   bestehen.
 

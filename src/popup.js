@@ -1,5 +1,6 @@
 import { api, downloadBytes, fetchBytes, getActiveTab, loadSettings, saveSettings } from './lib/browser.js';
 import { exportFont } from './lib/convert.js';
+import { describeError } from './lib/errors.js';
 import { fileNameFor, formatBytes, mimeFor, safeFileName } from './lib/format.js';
 import { analyzeTab } from './lib/pipeline.js';
 import { forgetFontFile, loadFontFile, loadPreferredFont, registerPreview } from './lib/preview.js';
@@ -184,9 +185,7 @@ function createFileRow(family, variant, source) {
     } catch (error) {
       loaded = false;
       const unsupported = error.code === 'UNSUPPORTED_FORMAT';
-      sub.textContent = unsupported
-        ? `${formatLabel(source)} · Format nicht unterstützt`
-        : `Nicht ladbar${error.status ? ` (HTTP ${error.status})` : ''}`;
+      sub.textContent = `${formatLabel(source)} · ${describeError(error)}`;
       sub.classList.add('error');
       for (const button of actions.querySelectorAll('[data-target]')) button.disabled = true;
 
