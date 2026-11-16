@@ -6,7 +6,7 @@ import { systemSfnt } from './helpers.mjs';
 
 test('sfnt -> woff -> sfnt erhält alle Tabellen', async (t) => {
   const bytes = systemSfnt();
-  if (!bytes) return t.skip('keine System-TTF');
+  if (!bytes) return t.skip('no system TTF');
   const woff = await sfntToWoff(bytes);
   assert.equal(Buffer.from(woff.subarray(0, 4)).toString('ascii'), 'wOFF');
   const woffBuf = Buffer.from(woff);

@@ -5,7 +5,7 @@ import { systemSfnt, systemCff } from './helpers.mjs';
 
 test('readSfnt liest echte TTF-Tabellen', (t) => {
   const bytes = systemSfnt();
-  if (!bytes) return t.skip('keine System-TTF');
+  if (!bytes) return t.skip('no system TTF');
   const font = readSfnt(bytes);
   assert.equal(sfntKind(font.flavor), 'ttf');
   const tags = font.tables.map((x) => x.tag);
@@ -14,7 +14,7 @@ test('readSfnt liest echte TTF-Tabellen', (t) => {
 
 test('writeSfnt erhält alle Tabelleninhalte', (t) => {
   const bytes = systemSfnt();
-  if (!bytes) return t.skip('keine System-TTF');
+  if (!bytes) return t.skip('no system TTF');
   const font = readSfnt(bytes);
   const rebuilt = writeSfnt(font.flavor, font.tables.map(({ tag, data }) => ({ tag, data })));
   const again = readSfnt(rebuilt);
@@ -33,7 +33,7 @@ test('writeSfnt erhält alle Tabelleninhalte', (t) => {
 
 test('sniffContainer und sfntKind erkennen alle Container', (t) => {
   const ttf = systemSfnt();
-  if (!ttf) return t.skip('keine System-TTF');
+  if (!ttf) return t.skip('no system TTF');
   assert.equal(sniffContainer(ttf), 'ttf');
   assert.equal(sfntKind(0x4f54544f), 'otf');
   assert.equal(sfntKind(0x74746366), 'collection');

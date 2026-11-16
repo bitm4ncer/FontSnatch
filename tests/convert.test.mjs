@@ -6,7 +6,7 @@ import { systemSfnt, systemCff } from './helpers.mjs';
 
 test('TTF bleibt TTF, OTF bleibt OTF', async (t) => {
   const ttf = systemSfnt();
-  if (!ttf) return t.skip('keine System-TTF');
+  if (!ttf) return t.skip('no system TTF');
   const a = await toSfnt(new Uint8Array(ttf));
   assert.equal(a.kind, 'ttf');
   const b = await exportFont(new Uint8Array(ttf), 'ttf');
@@ -21,7 +21,7 @@ test('TTF bleibt TTF, OTF bleibt OTF', async (t) => {
 
 test('falsche Endung wird ohne Opt-in verweigert', async (t) => {
   const ttf = systemSfnt();
-  if (!ttf) return t.skip('keine System-TTF');
+  if (!ttf) return t.skip('no system TTF');
   await assert.rejects(() => exportFont(new Uint8Array(ttf), 'otf'), /FORMAT_MISMATCH/);
   const forced = await exportFont(new Uint8Array(ttf), 'otf', { allowMismatchedExtension: true });
   assert.equal(forced.renamed, true);
@@ -29,7 +29,7 @@ test('falsche Endung wird ohne Opt-in verweigert', async (t) => {
 
 test('WOFF-Export liefert wOFF', async (t) => {
   const ttf = systemSfnt();
-  if (!ttf) return t.skip('keine System-TTF');
+  if (!ttf) return t.skip('no system TTF');
   const woff = await exportFont(new Uint8Array(ttf), 'woff');
   assert.equal(Buffer.from(woff.data.subarray(0, 4)).toString('ascii'), 'wOFF');
   assert.equal(woff.kind, 'woff');
