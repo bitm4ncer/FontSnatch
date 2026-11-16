@@ -8,7 +8,7 @@
 
 List, preview, and export the fonts a website actually uses — as TTF, OTF, or WOFF.
 
-[![Chrome](https://img.shields.io/badge/Chrome-Brave-Vivaldi-252525?style=flat-square&logo=googlechrome&logoColor=ff0500)](#chromium-browsers-chrome-brave-vivaldi-edge)
+[![Chrome](https://img.shields.io/badge/Chrome%20%7C%20Brave%20%7C%20Vivaldi%20%7C%20Edge-252525?style=flat-square&logo=googlechrome&logoColor=ff0500)](#chromium-browsers-chrome-brave-vivaldi-edge)
 [![Firefox](https://img.shields.io/badge/Firefox-252525?style=flat-square&logo=firefoxbrowser&logoColor=ff0500)](#firefox)
 [![Manifest V3](https://img.shields.io/badge/Manifest-V3-252525?style=flat-square)](#)
 [![License: MIT](https://img.shields.io/badge/License-MIT-252525?style=flat-square)](#license)
