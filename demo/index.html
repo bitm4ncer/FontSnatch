@@ -1,11 +1,11 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>FontSnatch Demo</title>
 
-    <!-- Google Fonts: erscheint als Webfont mit mehreren Schnitten -->
+    <!-- Google Fonts: shows up as a webfont with several weights and styles -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
@@ -14,8 +14,8 @@
     />
 
     <style>
-      /* Selbst gehosteter Font: demo.woff2 muss im Ordner demo/fonts liegen.
-         Fehlt die Datei, fällt der Browser auf Georgia zurück. */
+      /* Self-hosted font: demo.woff2 has to live in demo/fonts.
+         If the file is missing, the browser falls back to Georgia. */
       @font-face {
         font-family: "Local Demo";
         src: url("fonts/demo.woff2") format("woff2");
@@ -23,7 +23,7 @@
         font-style: normal;
       }
 
-      /* Absichtlich nirgends verwendet: testet den Filter "Alle". */
+      /* Intentionally unused: exercises the "All" filter. */
       @font-face {
         font-family: "Unused Demo";
         src: url("fonts/unused.woff2") format("woff2");
@@ -53,8 +53,8 @@
       .hint {
         margin-top: 32px;
         padding: 12px 14px;
-        border-left: 3px solid #ff5a1f;
-        background: #fff4ee;
+        border-left: 3px solid #ff0500;
+        background: #fff1f0;
         font-family: system-ui, sans-serif;
         font-size: 13px;
       }
@@ -64,25 +64,25 @@
     <h1>FontSnatch Demo</h1>
 
     <p>
-      Dieser Absatz nutzt den selbst gehosteten Font „Local Demo“. Fehlt die Datei
-      <code>demo/fonts/demo.woff2</code>, zeigt der Browser Georgia.
+      This paragraph uses the self-hosted font “Local Demo”. If
+      <code>demo/fonts/demo.woff2</code> is missing, the browser shows Georgia.
     </p>
 
     <p class="roboto">
-      Dieser Absatz nutzt <strong>Roboto von Google Fonts</strong> in zwei Schnitten
-      (400 und 700). Im Popup sollten beide Varianten als WOFF2 auftauchen.
+      This paragraph uses <strong>Roboto from Google Fonts</strong> in two weights
+      (400 and 700). The popup should list both as WOFF2 files.
     </p>
 
-    <p class="roboto"><em>Dieser Absatz nutzt Roboto italic (400) – ein echter Kursiv-Schnitt.</em></p>
+    <p class="roboto"><em>This paragraph uses Roboto italic (400) — a real italic cut.</em></p>
 
-    <p class="georgia">Dieser Absatz nutzt Georgia – ein System-Font, nicht herunterladbar.</p>
+    <p class="georgia">This paragraph uses Georgia, a system font that cannot be downloaded.</p>
 
     <p class="hint">
-      Testfälle: „Genutzt“ zeigt Local Demo, Roboto (inkl. italic) und Georgia (grau).
-      „Alle“ zeigt zusätzlich „Unused Demo“. „Mit Quelle“ zeigt alle Familien mit einer
-      Datei-URL (auch „Unused Demo“), blendet also nur Georgia aus. Der Sammeldownload
-      enthält Local Demo und Roboto mit allen Schnitten (Unused Demo scheitert
-      absichtlich mit 404).
+      Test cases: “Used” shows Local Demo, Roboto (including italic), and Georgia
+      (greyed out). “All” also shows “Unused Demo”. “With source” shows every family
+      that has a file URL (including “Unused Demo”), so only Georgia is hidden. The
+      bulk download contains Local Demo and Roboto with all cuts; “Unused Demo” fails
+      with a 404 on purpose.
     </p>
   </body>
 </html>

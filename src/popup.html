@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="de">
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -9,24 +9,24 @@
   <body>
     <header class="top">
       <div class="brand">
-        <img src="icons/icon32.png" alt="" width="18" height="18" />
+        <img src="icons/icon32.png" alt="" width="20" height="20" />
         <span>FontSnatch</span>
       </div>
       <span id="site" class="site"></span>
-      <button id="reload" class="icon" type="button" title="Neu laden" aria-label="Neu laden">⟳</button>
+      <button id="reload" class="icon" type="button" title="Reload" aria-label="Reload">⟳</button>
     </header>
 
     <div class="toolbar">
-      <div id="filters" class="chips" role="group" aria-label="Filter">
-        <button type="button" class="chip active" data-filter="used">Genutzt</button>
-        <button type="button" class="chip" data-filter="all">Alle</button>
-        <button type="button" class="chip" data-filter="downloadable">Mit Quelle</button>
+      <div id="filters" class="chips" role="group" aria-label="Filter fonts">
+        <button type="button" class="chip active" data-filter="used">Used</button>
+        <button type="button" class="chip" data-filter="all">All</button>
+        <button type="button" class="chip" data-filter="downloadable">With source</button>
       </div>
-      <input id="search" type="search" placeholder="Font suchen …" autocomplete="off" />
+      <input id="search" type="search" placeholder="Search fonts…" autocomplete="off" />
     </div>
 
     <div class="preview-row">
-      <label for="preview-text">Vorschau</label>
+      <label for="preview-text">Preview</label>
       <input id="preview-text" type="text" autocomplete="off" />
     </div>
 
@@ -36,26 +36,26 @@
     <div id="empty" class="empty" hidden></div>
 
     <section id="unassigned" class="unassigned" hidden>
-      <h3>Nicht zugeordnete Dateien</h3>
+      <h3>Unmatched files</h3>
       <div id="unassigned-list"></div>
     </section>
 
     <footer class="bottom">
-      <span class="hint">Nur Fonts verwenden, für die du Rechte hast.</span>
+      <span class="hint">Only download fonts you have the rights to use.</span>
       <div class="bottom-actions">
-        <select id="zip-format" title="Format für den Sammeldownload">
+        <select id="zip-format" title="Format for bulk download">
           <option value="native">Original</option>
           <option value="woff">WOFF</option>
         </select>
-        <button id="zip-button" type="button" class="ghost" disabled>Alles als ZIP</button>
-        <button id="settings" type="button" class="icon" title="Einstellungen" aria-label="Einstellungen">⚙</button>
+        <button id="zip-button" type="button" class="primary" disabled>Download ZIP</button>
+        <button id="settings" type="button" class="icon" title="Settings" aria-label="Settings">⚙</button>
       </div>
     </footer>
 
     <div id="settings-panel" class="settings" hidden>
       <label class="check">
         <input id="allow-mismatch" type="checkbox" />
-        <span>Falsche Dateiendung erlauben (Inhalt bleibt unverändert)</span>
+        <span>Allow mismatched file extension (content stays unchanged)</span>
       </label>
     </div>
 

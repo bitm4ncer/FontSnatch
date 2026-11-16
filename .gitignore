@@ -1,6 +1,7 @@
-dist/
 node_modules/
 *.zip
 .DS_Store
 .superpowers/
 demo/fonts/*.woff2
+.design/*.af
+.design/*~lock~

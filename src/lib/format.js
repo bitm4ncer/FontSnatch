@@ -1,4 +1,4 @@
-const numberFormat = new Intl.NumberFormat('de-DE', { maximumFractionDigits: 1 });
+const numberFormat = new Intl.NumberFormat('en-US', { maximumFractionDigits: 1 });
 
 export function formatBytes(bytes) {
   if (!Number.isFinite(bytes) || bytes < 0) return '–';

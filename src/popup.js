@@ -6,7 +6,7 @@ import { analyzeTab } from './lib/pipeline.js';
 import { forgetFontFile, loadFontFile, loadPreferredFont, registerPreview } from './lib/preview.js';
 import { formatLabel, subsetLabel } from './lib/select.js';
 
-const numberFormat = new Intl.NumberFormat('de-DE');
+const numberFormat = new Intl.NumberFormat('en-US');
 
 const state = {
   model: null,
@@ -67,13 +67,13 @@ function fileCount(families) {
 }
 
 function statusText() {
-  if (state.loading) return 'Analysiere Seite …';
+  if (state.loading) return 'Scanning page…';
   if (state.error) return '';
   if (!state.model) return '';
   const families = state.model.families;
   const files = fileCount(families);
-  let text = `${families.length} ${families.length === 1 ? 'Familie' : 'Familien'} · ${files} ${files === 1 ? 'Datei' : 'Dateien'}`;
-  if (state.model.stats.truncated) text += ' · Seite zu groß, Liste unvollständig';
+  let text = `${families.length} ${families.length === 1 ? 'family' : 'families'} · ${files} ${files === 1 ? 'file' : 'files'}`;
+  if (state.model.stats.truncated) text += ' · page too large, list incomplete';
   return text;
 }
 
@@ -99,10 +99,10 @@ function updateButtons(container, kind) {
     button.disabled = mismatch && !allow;
     button.title = mismatch
       ? allow
-        ? `Inhalt bleibt ${effective.toUpperCase()}, nur die Endung wird umbenannt.`
+        ? `Content stays ${effective.toUpperCase()}; only the extension is renamed.`
         : effective === 'ttf'
-          ? 'Enthält TrueType-Outlines; eine echte OTF-Konvertierung ist nicht möglich.'
-          : 'Enthält CFF-Outlines; eine echte TTF-Konvertierung ist nicht möglich.'
+          ? 'Contains TrueType outlines; true OTF conversion is not possible.'
+          : 'Contains CFF outlines; true TTF conversion is not possible.'
       : '';
   }
 }
@@ -139,11 +139,11 @@ async function performDownload(loader, family, variant, target, button) {
       ext,
     });
     downloadBytes(result.data, filename, mimeFor(result.kind));
-    button.textContent = 'Gespeichert';
+    button.textContent = 'Saved';
     ok = true;
   } catch (error) {
     console.error(error);
-    button.textContent = error.code === 'FORMAT_MISMATCH' ? 'Format' : 'Fehler';
+    button.textContent = error.code === 'FORMAT_MISMATCH' ? 'Format' : 'Error';
     if (error.code === 'FORMAT_MISMATCH') updateButtons(button.parentElement, error.kind);
   }
 
@@ -165,8 +165,9 @@ function createFileRow(family, variant, source) {
   const row = el('div', 'file');
   const meta = el('div', 'file-meta');
   meta.append(el('span', 'file-title', `${variant.weight} · ${variant.style}`));
-  const rangeText = variant.unicodeRange || 'alle Zeichen';
+  const rangeText = variant.unicodeRange || 'all characters';
   const sub = el('span', 'file-sub', `${formatLabel(source)} · ${rangeText}`);
+  sub.title = source.url;
   meta.append(sub);
   row.append(meta);
 
@@ -180,12 +181,14 @@ function createFileRow(family, variant, source) {
     sub.classList.remove('error');
     try {
       const { bytes, kind } = await loadFontFile(source.url);
-      sub.textContent = `${formatLabel(source)} · ${rangeText} · ${formatBytes(bytes.length)}${variant.isDefault ? ' · Standard' : ''}`;
+      sub.textContent = `${formatLabel(source)} · ${rangeText} · ${formatBytes(bytes.length)}${variant.isDefault ? ' · default' : ''}`;
+      sub.title = sub.textContent;
       updateButtons(actions, kind);
     } catch (error) {
       loaded = false;
       const unsupported = error.code === 'UNSUPPORTED_FORMAT';
       sub.textContent = `${formatLabel(source)} · ${describeError(error)}`;
+      sub.title = sub.textContent;
       sub.classList.add('error');
       for (const button of actions.querySelectorAll('[data-target]')) button.disabled = true;
 
@@ -215,18 +218,18 @@ function createCard(family) {
   if (family.isSystem) {
     badges.append(el('span', 'badge system', 'System'));
   } else if (!family.available) {
-    badges.append(el('span', 'badge warn', 'Keine Quelle'));
+    badges.append(el('span', 'badge warn', 'No source'));
   } else {
     const count = family.variants.length;
-    badges.append(el('span', 'badge', `${count} ${count === 1 ? 'Datei' : 'Dateien'}`));
+    badges.append(el('span', 'badge', `${count} ${count === 1 ? 'file' : 'files'}`));
   }
   head.append(badges);
   card.append(head);
 
   const meta = [];
   if (family.weightsUsed.length) meta.push(family.weightsUsed.join(' · '));
-  if (family.usedChars) meta.push(`${numberFormat.format(family.usedChars)} Zeichen`);
-  else if (!family.isSystem) meta.push('nicht genutzt');
+  if (family.usedChars) meta.push(`${numberFormat.format(family.usedChars)} characters`);
+  else if (!family.isSystem) meta.push('not used');
   if (meta.length) card.append(el('p', 'meta', meta.join(' · ')));
 
   const preview = el('div', 'preview', state.settings?.previewText || '');
@@ -250,7 +253,7 @@ function createCard(family) {
   if (family.variants.length) {
     const details = el('details', 'files');
     const count = family.variants.length;
-    details.append(el('summary', null, `${count} ${count === 1 ? 'Datei' : 'Dateien'} anzeigen`));
+    details.append(el('summary', null, 'Show files'));
 
     const loaders = [];
     for (const variant of family.variants) {
@@ -285,7 +288,7 @@ function renderUnassigned() {
     row.append(meta);
 
     const actions = el('div', 'file-actions');
-    const button = el('button', 'pill', 'Laden');
+    const button = el('button', 'pill', 'Load');
     button.type = 'button';
     button.addEventListener('click', async () => {
       button.disabled = true;
@@ -293,13 +296,13 @@ function renderUnassigned() {
       try {
         const bytes = await fetchBytes(item.url);
         downloadBytes(bytes, safeFileName(item.name));
-        button.textContent = 'Gespeichert';
+        button.textContent = 'Saved';
       } catch (error) {
         console.error(error);
-        button.textContent = 'Fehler';
+        button.textContent = 'Error';
       }
       setTimeout(() => {
-        button.textContent = 'Laden';
+        button.textContent = 'Load';
         button.disabled = false;
       }, 1400);
     });
@@ -317,7 +320,7 @@ function renderEmpty(families) {
   if (state.error) {
     els.empty.hidden = false;
     els.empty.textContent =
-      'Auf dieser Seite nicht verfügbar. Öffne eine normale Website (kein chrome://, Add-on-Store oder PDF).';
+      'Not available on this page. Open a regular website (not chrome://, an add-on store, or a PDF).';
     return;
   }
   if (!state.model) {
@@ -326,14 +329,14 @@ function renderEmpty(families) {
   }
   if (!state.model.families.length) {
     els.empty.hidden = false;
-    els.empty.textContent = 'Keine Fonts auf dieser Seite gefunden.';
+    els.empty.textContent = 'No fonts found on this page.';
     return;
   }
   if (!families.length) {
     els.empty.hidden = false;
     els.empty.textContent = state.query
-      ? `Kein Treffer für „${state.query}“.`
-      : 'Keine Fonts für diesen Filter.';
+      ? `No results for “${state.query}”.`
+      : 'No fonts match this filter.';
     return;
   }
   els.empty.hidden = true;
@@ -369,11 +372,11 @@ async function loadPreview(card) {
     updateButtons(card.querySelector('.actions'), kind);
   } catch (error) {
     console.error(error);
-    preview.title = 'Vorschau nicht verfügbar';
+    preview.title = 'Preview unavailable';
     preview.classList.add('preview-failed');
     const badges = card.querySelector('.badges');
     if (badges && !badges.querySelector('.preview-warn')) {
-      badges.append(el('span', 'badge warn preview-warn', 'Vorschau n. v.'));
+      badges.append(el('span', 'badge warn preview-warn', 'No preview'));
     }
   }
 }
@@ -489,7 +492,7 @@ els.zipButton.addEventListener('click', async () => {
     });
   } catch (error) {
     console.error(error);
-    els.zipButton.textContent = 'Fehler';
+    els.zipButton.textContent = 'Error';
     setTimeout(() => {
       els.zipButton.textContent = original;
     }, 1500);

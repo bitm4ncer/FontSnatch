@@ -39,5 +39,5 @@ test('Dateinamen und Größen', () => {
   assert.equal(sanitizeFamily('  Noto Sans / Display '), 'Noto-Sans-Display');
   assert.equal(fileNameFor({ family: 'Noto Sans', weight: '400', style: 'italic', subset: 'latin', ext: 'woff2' }), 'Noto-Sans-400-italic-latin.woff2');
   assert.equal(fileNameFor({ family: 'X', weight: '400', style: 'normal', subset: null, ext: 'ttf' }), 'X-400-normal.ttf');
-  assert.equal(formatBytes(22636), '22,1 KB');
+  assert.equal(formatBytes(22636), '22.1 KB');
 });

@@ -28,7 +28,7 @@ function fail(message) {
 async function main() {
   const key = new URLSearchParams(location.search).get('key');
   if (!key) {
-    fail('Kein Export-Schlüssel übergeben.');
+    fail('No export key provided.');
     return;
   }
 
@@ -37,18 +37,18 @@ async function main() {
   await api.storage.local.remove(key);
 
   if (!payload) {
-    fail('Exportdaten nicht gefunden. Bitte den Export im Popup erneut starten.');
+    fail('Export data not found. Start the export again from the popup.');
     return;
   }
 
   const { model, format, host } = payload;
   const plans = planExport(model, format);
   if (!plans.length) {
-    fail('Keine ladbaren Fonts gefunden.');
+    fail('No downloadable fonts found.');
     return;
   }
 
-  summary.textContent = `${plans.length} ${plans.length === 1 ? 'Datei' : 'Dateien'} werden vorbereitet …`;
+  summary.textContent = `Preparing ${plans.length} ${plans.length === 1 ? 'file' : 'files'}…`;
   const entries = [];
   let errors = 0;
 
@@ -75,11 +75,11 @@ async function main() {
 
     const done = index + 1;
     bar.style.width = `${Math.round((done / plans.length) * 100)}%`;
-    summary.textContent = `Datei ${done} von ${plans.length} …`;
+    summary.textContent = `File ${done} of ${plans.length}…`;
   }
 
   if (!entries.length) {
-    fail('Keine Datei konnte geladen werden.');
+    fail('No file could be loaded.');
     return;
   }
 
@@ -89,7 +89,7 @@ async function main() {
   downloadBytes(zip, `fontsnatch-${safeHost}-${date}.zip`, 'application/zip');
 
   bar.style.width = '100%';
-  summary.textContent = `${entries.length} ${entries.length === 1 ? 'Datei' : 'Dateien'} als ZIP gespeichert${errors ? ` · ${errors} Fehler` : ''}`;
+  summary.textContent = `${entries.length} ${entries.length === 1 ? 'file' : 'files'} saved as ZIP${errors ? ` · ${errors} ${errors === 1 ? 'error' : 'errors'}` : ''}`;
   closeButton.disabled = false;
 }
 
